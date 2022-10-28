@@ -12,6 +12,9 @@
   <code><img height="48" src="https://img.icons8.com/nolan/64/python.png" /></code>
   <code><img height="48" src="https://img.icons8.com/color/48/000000/django.png" /></code>
   <code><img height="48" src="https://img.icons8.com/dusk/50/000000/api.png" /></code>
+  <code><img height="48" src="./pic/Swagger-logo.png" /></code>
+
+</p>
 
 </p>
 
@@ -63,3 +66,4 @@ python3 manage.py createsuperuser --username admin --email admin@gmail.com
 superuser = admin
 password = admin123
 ```
+
