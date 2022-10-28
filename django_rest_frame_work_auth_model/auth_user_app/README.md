@@ -3,16 +3,17 @@
   Building API using Django REST framework
   <br />
   <br />
-  <code><img height="66" src="https://ksr-ugc.imgix.net/assets/011/705/984/4ea78430d3ad7dc88106a7b973248ba7_original.jpg?ixlib=rb-4.0.2&crop=faces&w=1552&h=873&fit=crop&v=1463687041&auto=format&frame=1&q=92&s=16f9ae9168eecef976e5a19887afb152" /></code>
+  <code><img height="66" src="./pic/rest_frame_work.png" /></code>
   <br />
   <br />
 </p>
 
 <p align="center">
-  <code><img height="48" src="https://img.icons8.com/nolan/64/python.png" /></code>
-  <code><img height="48" src="https://img.icons8.com/color/48/000000/django.png" /></code>
-  <code><img height="48" src="https://img.icons8.com/dusk/50/000000/api.png" /></code>
-  <code><img height="48" src="./pic/Swagger-logo.png" /></code>
+  <code><img height="48" src="./pic/python.png"/></code>
+  <code><img height="48" src="./pic/django.png"/></code>
+  <code><img height="48" src="./pic/Swagger-logo.png"/></code>
+  <code><img height="48" src="./pic/postman.png"/></code>
+  <code><img height="48" src="./pic/api.jpg"/></code>
 
 </p>
 
