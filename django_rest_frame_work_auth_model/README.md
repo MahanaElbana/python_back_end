@@ -96,9 +96,9 @@ SECRET_KEY = env('SECRET_KEY')
 BASE_DIR = './python_back_end/django_rest_frame_work_auth_model/'
 ```
  - As a result, the (.env) file should be located in the django_rest_framework_auth_model directory. 
-``` 
  - your (.env) file 
- ```
+
+```
 SECRET_KEY=your_secret_key
 DEBUG=True
 EMAIL_HOST_USER=your_gmail
