@@ -1,4 +1,4 @@
-# Authentication API :rocket: 
+# User API Authentication & authorization :rocket: 
 <p align="center">
   Building API using Django REST framework
   <br />
@@ -61,6 +61,38 @@ class EmailVerificationModel(models.Model):
 <p align="center"> [2] create email.py </p>
 <p align="center"> [2] create email.py </p>
 
+
+
+
+# How to configure your Django application with environment variables .
+
+ - install django-environ 
+  ```
+  $ python -m pip install django-environ
+  ```
+
+```python 
+BASE_DIR = 
+```
+```python 
+
+import environ
+import os
+
+env = environ.Env(
+    # set casting, default value
+    DEBUG=(bool, False)
+)
+
+# Take environment variables from .env file
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+# False if not in os.environ
+DEBUG = env('DEBUG')
+
+# Raises Django's ImproperlyConfigured exception if SECRET_KEY not in os.environ
+SECRET_KEY = env('SECRET_KEY')
+```
 
 ``` 
 python3 manage.py createsuperuser --username admin --email admin@gmail.com
