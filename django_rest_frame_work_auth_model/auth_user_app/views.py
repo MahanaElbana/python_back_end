@@ -156,7 +156,7 @@ class LogInUserNameAPIView(APIView):
                     return Response({"error": "Invalid authentication creadintial !"}, status=status.HTTP_400_BAD_REQUEST)
                 
 
-                # Check that the email is verified.
+                # Check that the email is verified .
                 try : 
                     if user.is_active == True : # do not forget convert true to false 
                         print('user active is : {}'.format(user.is_active))
