@@ -3,7 +3,7 @@
 from .serializers import (
     UserSerializer,
     SendEmailVerficationSerializer,
-    LogInSerializer)
+    LogInUserNameSerializer)
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -23,6 +23,7 @@ from django.contrib.auth import authenticate
 # import jwt
 
 ''' -------------------------------------------------------------- '''
+# [1] GET authorized user"s profile details
 class UserDetails(APIView):
     """
     URL : http://127.0.0.1:8001/auth/api/user/
@@ -49,7 +50,7 @@ class UserDetails(APIView):
 
 
 ''' -------------------------------------------------------------- '''
-# [1] Create New an account (SignUp)
+# [2] Create New an account (SignUp)
 
 
 class RegisterAPIView(APIView):
@@ -130,11 +131,11 @@ class VerifyEmailOrEmailActivationAPIView(APIView):
 
 
 # [4]
-class LogInAPIView(APIView):
+class LogInUserNameAPIView(APIView):
     '''
-    log in using ( email or username ) and password
+    log in using (username ) and password
     '''
-    serializer_class = LogInSerializer
+    serializer_class = LogInUserNameSerializer
 
     def post(self, request):
 
@@ -153,6 +154,18 @@ class LogInAPIView(APIView):
 
                 if user is None:
                     return Response({"error": "Invalid authentication creadintial !"}, status=status.HTTP_400_BAD_REQUEST)
+                
+
+                # Check that the email is verified.
+                try : 
+                    if user.is_active == True : # do not forget convert true to false 
+                        print('user active is : {}'.format(user.is_active))
+                        raise Exception('active your email firstly !')
+                except :
+                   return Response({'error': 'active your email firstly !'})
+                
+
+                # make a refresh and an access token 
 
                 #created_token =  create_token(user.username)
                 #instance_token = Token.objects.create(key = created_token , user =user)

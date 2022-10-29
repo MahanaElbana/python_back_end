@@ -127,9 +127,9 @@ class VerifyEmailOrEmailActivationAPIView():
     pass
 
 
-class LogInSerializer(serializers.ModelSerializer):
+class LogInUserNameSerializer(serializers.ModelSerializer):
     
-    username = serializers.CharField(allow_blank=True, allow_null=True)
+    username = serializers.CharField(allow_blank=False, allow_null=False)
    
     password = serializers.CharField(
         required=True,
@@ -138,19 +138,19 @@ class LogInSerializer(serializers.ModelSerializer):
    
     class Meta :
         model = User
-        fields = ["email" ,"username" ,"password"]
+        fields = ["username" ,"password"]
         
-    def validate(self, data):
-          
-        '''
-        INFO :
-         - print(data)
-         - OrderedDict([('email', 'yor email'), ('username', 'your username'), ('password', 'your password')])
-        '''  
-        username = data.get('username').strip()
-        email = data.get('email').strip()
-        
-        if username == "" and  email == "" : 
-            raise serializers.ValidationError("At least enter one field from username and email.")  
-          
-        return data    
+    #def validate(self, data):
+    #      
+    #    '''
+    #    INFO :
+    #     - print(data)
+    #     - OrderedDict([('email', 'yor email'), ('username', 'your username'), ('password', 'your password')])
+    #    '''  
+    #    username = data.get('username').strip()
+    #    email = data.get('email').strip()
+    #    
+    #    if username == "" and  email == "" : 
+    #        raise serializers.ValidationError("At least enter one field from username and email.")  
+    #      
+    #    return data    
