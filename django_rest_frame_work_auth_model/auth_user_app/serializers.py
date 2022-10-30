@@ -3,6 +3,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+from rest_framework.authtoken.models import Token
 import re
 
 class UserSerializer(serializers.ModelSerializer):
@@ -153,4 +154,11 @@ class LogInUserNameSerializer(serializers.ModelSerializer):
     #    if username == "" and  email == "" : 
     #        raise serializers.ValidationError("At least enter one field from username and email.")  
     #      
-    #    return data    
+    #    return data  
+ 
+
+class GenerateAccessTokenSerializer(serializers.ModelSerializer):
+
+    class Meta :
+        model = Token
+        fields = '__all__'

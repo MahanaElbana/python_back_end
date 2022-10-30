@@ -41,13 +41,30 @@ def decode_data(jwtToken):
     
     return payload_data
 
-def create_token(username):
+def create_access_token(username):
         
         # generate token
         token = encode_data(
-            payload_data={'username': username,'exp': datetime.utcnow() + timedelta(days=90)}
+            payload_data={'username': username,'exp': datetime.utcnow() + timedelta(seconds=50)}
         )
         
         return token    
 
+def create_access_refresh_token(username):
+        '''
+         - for the first time .
+        '''
+        # generate token
+        access_token = encode_data(
+            payload_data={'username': username,'exp': datetime.utcnow() + timedelta(minutes=5)}
+        )
+        
+        refresh_token = encode_data(
+            payload_data={'username': username,'exp': datetime.utcnow() + timedelta(days=90)}
+        )
+        return {
+            "refresh":refresh_token ,
+            "access" :access_token 
+        }
+  
 #eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNjc0NDU2NDI5fQ.Hu8PXHmczZPR05oNW-c-VGxCdTMn9LgSDVoV_n8GUXI

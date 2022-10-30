@@ -91,7 +91,7 @@ DEBUG = env('DEBUG')
 # Raises Django's ImproperlyConfigured exception if SECRET_KEY not in os.environ
 SECRET_KEY = env('SECRET_KEY')
 ```
- - base directory in django project/settings.py
+ - The project base directory in django project/settings.py
 ```python 
 BASE_DIR = './python_back_end/django_rest_frame_work_auth_model/'
 ```
