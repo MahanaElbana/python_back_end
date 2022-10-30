@@ -64,13 +64,13 @@ class EmailVerificationModel(models.Model):
 
 
 
-## How to configure your Django application with environment variables :telescope: .
+## How to configure your Django application with environment variables :telescope:
 
- - install django-environ 
+ - Install django-environ 
   ```
   $ python -m pip install django-environ
   ```
- - python code in project/settings.py
+ - python code in **project/settings.py**
 
 ```python 
 
@@ -91,12 +91,12 @@ DEBUG = env('DEBUG')
 # Raises Django's ImproperlyConfigured exception if SECRET_KEY not in os.environ
 SECRET_KEY = env('SECRET_KEY')
 ```
- - base directory
+ - base directory in django project/settings.py
 ```python 
 BASE_DIR = './python_back_end/django_rest_frame_work_auth_model/'
 ```
  - As a result, the (.env) file should be located in the django_rest_framework_auth_model directory. 
- - your (.env) file 
+ - your (.env) file , Do not leave a space between the equals sign and value. 
 
 ```
 SECRET_KEY=your_secret_key
@@ -105,9 +105,15 @@ EMAIL_HOST_USER=your_gmail
 EMAIL_HOST_PASSWORD=password_app
  ```
 
-## SuperUser data 
-python3 manage.py createsuperuser --username admin --email admin@gmail.com
+## How to create SuoerUser :telescope: 
+```
+$ python3 manage.py createsuperuser --username admin --email admin@gmail.com
+```
+## Super User Data :telescope: 
+```
 superuser = admin
 password = admin123
 ```
+
+
 
