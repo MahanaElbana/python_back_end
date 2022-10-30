@@ -2,7 +2,7 @@ from django.urls import path
 from .views import ( GenerateAccessTokenAPIView, LogInUserNameAPIView, 
         UserDetails ,
         RegisterAPIView ,
-        SendEmailVerficationAPIView , 
+        SendEmailVerficationAPIView , VerifyEmailOrEmailActivationAPIView,
         )
 
 from rest_framework.authtoken import views
@@ -24,8 +24,11 @@ urlpatterns = [
     path('login/' ,LogInUserNameAPIView.as_view()) ,
    
     # generate access token using refresh token
-    path('generate_access_token/' ,GenerateAccessTokenAPIView.as_view())
-  
+    path('generate_access_token/' ,GenerateAccessTokenAPIView.as_view()),
+
+    # to verify your email and match the OTP code.
+    path('EmailOTPpVerfication/' ,VerifyEmailOrEmailActivationAPIView.as_view())
+
     
 ]
 #eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFkbWluIiwiZXhwIjoxNjc0ODk2Njg1fQ.5lXmRTZ-xXLK_yCIxS1nTpscBOtRcYW5894RwyTHkMA

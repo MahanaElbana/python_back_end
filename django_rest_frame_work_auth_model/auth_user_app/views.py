@@ -3,9 +3,12 @@
 from .serializers import (GenerateAccessTokenSerializer, 
                           UserSerializer,
                           SendEmailVerficationSerializer,
-                          LogInUserNameSerializer)
+                          LogInUserNameSerializer ,VerifyEmailOrEmailActivationSerializer)
+
 from auth_user_app.jwt_tokens import (create_access_token,
                                       create_access_refresh_token)
+
+from auth_user_app.models import EmailVerificationModel
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -24,8 +27,6 @@ from django.contrib.auth import authenticate
 
 ''' -------------------------------------------------------------- '''
 # [1] GET authorized user"s profile details
-
-
 class UserDetails(APIView):
     """
     URL : http://127.0.0.1:8001/auth/api/user/
@@ -52,8 +53,6 @@ class UserDetails(APIView):
 
 ''' -------------------------------------------------------------- '''
 # [2] Create New an account (SignUp)
-
-
 class RegisterAPIView(APIView):
     '''
     URL : http://127.0.0.1:8001/auth_user_app/register/
@@ -87,7 +86,8 @@ class RegisterAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# [2] Send  otp code to gmail  (code to active email)
+''' -------------------------------------------------------------- '''
+# [3] Send  otp code to gmail  (code to active email)
 class SendEmailVerficationAPIView(APIView):
     '''
       -- send otp code to user email to active your email -- 
@@ -115,23 +115,61 @@ class SendEmailVerficationAPIView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-# [3] Email verfication ot Email activation
+''' -------------------------------------------------------------- '''
+# [4] Email verfication or Email activation
 class VerifyEmailOrEmailActivationAPIView(APIView):
     '''
       -- active email using otp code -- 
 
-    URL : http://127.0.0.1:8001/auth_user_app/SendEmailVerfication/
+    URL : http://127.0.0.1:8001/api/auth/EmailOTPpVerfication/
     Method : PUT
-    Required body data (json) : {"email":"your email"}
+    Required body data (json) : {"email":"your email" , "otp":"your otp"}
     '''
-    serializer_class = SendEmailVerficationSerializer
+    serializer_class = VerifyEmailOrEmailActivationSerializer
 
-    def put():
-        pass
+    def put(self , request ):
+        
+        serializer = self.serializer_class(data=request.data)
 
+        if serializer.is_valid():
+            
+            email = serializer.validated_data.get('email')
+            otp_code = serializer.validated_data.get('otp')
+            
+            #  Does that user exist or not?
+            try : 
+               user = User.objects.get(email = email)
+            except User.DoesNotExist as error: 
+                return Response({'error':str(error)}, status=status.HTTP_400_BAD_REQUEST)
+            
+            #  Does that emailVerificationModel exist or not?
+            try: 
+                emailVerificationModel = EmailVerificationModel.objects.get(user =user)
+            except EmailVerificationModel.DoesNotExist as error: 
+                return Response({'error':str(error)}, status=status.HTTP_400_BAD_REQUEST)    
+            
+            # email activation
+            try:
+                
+                if otp_code != emailVerificationModel.otp : 
+                    raise Exception("otp is not correct !")
+                
+                user.is_active = True
+                user.save()
+               
+                return Response(
+                    {**serializer.data ,"is_active":str(user.is_active) , 
+                      "username" : user.username},
+                       status=status.HTTP_201_CREATED)
+            
+            except Exception as error:
+                return Response({"error": str(error)}, status=status.HTTP_400_BAD_REQUEST)
 
-# [4]
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+''' -------------------------------------------------------------- '''
+
+# [5] log in using username and password 
 class LogInUserNameAPIView(APIView):
     '''
     log in using (username ) and password
@@ -194,7 +232,7 @@ class LogInUserNameAPIView(APIView):
 
 
 ''' generate access token using refresh token API View '''
-# [5] re_generate access token
+# [6] re_generate access token
 class GenerateAccessTokenAPIView(APIView):
       
     serializer_class = GenerateAccessTokenSerializer

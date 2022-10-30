@@ -124,10 +124,26 @@ class SendEmailVerficationSerializer(serializers.ModelSerializer):
          
         return {'email':user.email ,'username':user.username}     
 
-class VerifyEmailOrEmailActivationAPIView():
-    pass
 
+# to verify your email and match the OTP code.
+class VerifyEmailOrEmailActivationSerializer(serializers.ModelSerializer):
+      
+    otp = serializers.IntegerField(
+        write_only=True,
+        required=True,
+        style={'input_type': 'password', 'placeholder': 'Password'},
+    ) 
 
+    email = serializers.EmailField(
+        required=True,
+    ) 
+
+    class Meta :
+        model = User
+        fields = ("email","otp" ,)
+       
+
+# ---- 
 class LogInUserNameSerializer(serializers.ModelSerializer):
     
     username = serializers.CharField(allow_blank=False, allow_null=False)
