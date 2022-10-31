@@ -38,15 +38,26 @@ class UserDetails(APIView):
     """
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication] # Bearer or Token
+    ## ---------------- swagger ------------------------##
+    def get_serializer_context(self):
+        return {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
 
-    def get(self, request, format=None):
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = self.get_serializer_context()
+        return self.serializer_class(*args, **kwargs)
+    ## --------------------------------------------------##
+    def get(self, request):
         print(request.user)
         try:
             user = request.user
             user_filterd = User.objects.filter(
                 username=user.username, email=user.email)
             serializer = UserSerializer(user_filterd, many=True)
-            return Response(serializer.data)
+            return Response(serializer.data , status=status.HTTP_200_OK)
         except:
             return Response({'error': 'user is not exist'})
 
@@ -66,7 +77,18 @@ class RegisterAPIView(APIView):
       }
     '''
     serializer_class = UserSerializer
+    ## ---------------- swagger ------------------------##
+    def get_serializer_context(self):
+        return {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
 
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = self.get_serializer_context()
+        return self.serializer_class(*args, **kwargs)
+    ## --------------------------------------------------##
     def post(self, request):
 
         serializer = self.serializer_class(data=request.data)
@@ -97,7 +119,18 @@ class SendEmailVerficationAPIView(APIView):
     Required body data (json) : {"email":"your email"}
     '''
     serializer_class = SendEmailVerficationSerializer
+    ## ---------------- swagger ------------------------##
+    def get_serializer_context(self):
+        return {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
 
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = self.get_serializer_context()
+        return self.serializer_class(*args, **kwargs)
+    ## --------------------------------------------------##
     def post(self, request):
 
         serializer = self.serializer_class(data=request.data)
@@ -126,7 +159,18 @@ class VerifyEmailOrEmailActivationAPIView(APIView):
     Required body data (json) : {"email":"your email" , "otp":"your otp"}
     '''
     serializer_class = VerifyEmailOrEmailActivationSerializer
+    ## ---------------- swagger ------------------------##
+    def get_serializer_context(self):
+        return {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
 
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = self.get_serializer_context()
+        return self.serializer_class(*args, **kwargs)
+    ## --------------------------------------------------##
     def put(self , request ):
         
         serializer = self.serializer_class(data=request.data)
@@ -172,11 +216,23 @@ class VerifyEmailOrEmailActivationAPIView(APIView):
 # [5] log in using username and password 
 class LogInUserNameAPIView(APIView):
     '''
-    log in using (username ) and password
+    log in using (username ) and password 
     '''
     serializer_class = LogInUserNameSerializer
+    
+   ## ---------------- swagger ------------------------##
+    def get_serializer_context(self):
+        return {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
 
-    def post(self, request):
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = self.get_serializer_context()
+        return self.serializer_class(*args, **kwargs)
+    ## --------------------------------------------------##
+    def post(self, request  ):
 
         serializer = self.serializer_class(data=request.data)
 
@@ -239,7 +295,18 @@ class GenerateAccessTokenAPIView(APIView):
     
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTRefreshAuthentication] 
+    ## ---------------- swagger ------------------------##
+    def get_serializer_context(self):
+        return {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
     
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = self.get_serializer_context()
+        return self.serializer_class(*args, **kwargs)
+    ## --------------------------------------------------##
     def get(self, request, format=None):
         print(request.user)
         try:
@@ -253,3 +320,28 @@ class GenerateAccessTokenAPIView(APIView):
         except:
             return Response({'error': 'user is not exist' } , status= status.HTTP_400_BAD_REQUEST)
       
+''' ---------------------------------------------------------------------------'''
+# [7] logout API VIEW
+class LogoutView(APIView):
+    
+    serializer_class = GenerateAccessTokenSerializer
+    
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTRefreshAuthentication] 
+    ## ---------------- swagger ------------------------##
+    def get_serializer_context(self):
+        return {
+            'request': self.request,
+            'format': self.format_kwarg,
+            'view': self
+        }
+
+    def get_serializer(self, *args, **kwargs):
+        kwargs['context'] = self.get_serializer_context()
+        return self.serializer_class(*args, **kwargs)
+    ## --------------------------------------------------##
+    def delete(self, request):
+        user = request.user
+        token = Token.objects.filter(user = user).first()
+        token.delete()
+        return Response({'error': 'user is not exist' } , status= status.HTTP_400_BAD_REQUEST)

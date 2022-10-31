@@ -2,7 +2,7 @@ from django.urls import path
 from .views import ( GenerateAccessTokenAPIView, LogInUserNameAPIView, 
         UserDetails ,
         RegisterAPIView ,
-        SendEmailVerficationAPIView , VerifyEmailOrEmailActivationAPIView,
+        SendEmailVerficationAPIView , VerifyEmailOrEmailActivationAPIView,LogoutView
         )
 
 from rest_framework.authtoken import views
@@ -27,7 +27,9 @@ urlpatterns = [
     path('generate_access_token/' ,GenerateAccessTokenAPIView.as_view()),
 
     # to verify your email and match the OTP code.
-    path('EmailOTPpVerfication/' ,VerifyEmailOrEmailActivationAPIView.as_view())
+    path('EmailOTPpVerfication/' ,VerifyEmailOrEmailActivationAPIView.as_view()) ,
+
+    path('logout/' ,LogoutView.as_view()) 
 
     
 ]

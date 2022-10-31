@@ -62,7 +62,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
 ]
 
-# swagger api autherization 
+#swagger api autherization 
 SWAGGER_SETTINGS = {
    'SECURITY_DEFINITIONS': {
       'Basic': {
