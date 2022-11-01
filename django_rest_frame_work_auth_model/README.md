@@ -115,5 +115,11 @@ superuser = admin
 password = admin123
 ```
 
+# How to add **Swagger** documentation to **Postman** :telescope:
 
-
+<p align="center">
+  <code><img src="./pic/swagger_postman1.png" /></code>
+  <code><img src="./pic/swagger_postman2.png" /></code>
+  <code><img src="./pic/swagger_postman3.png" /></code>
+  <code><img src="./pic/swagger_postman4.png" /></code>
+</p>
