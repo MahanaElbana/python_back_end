@@ -1,0 +1,1224 @@
+  
+   
+###  /---------/----------/recently , important links for rest frame work , django  ,and others  ---------/----------/
+``` urls
+   1] https://www.django-rest-framework.org/
+   2] https://www.programcreek.com/python/example/71197/rest_framework.permissions.SAFE_METHODS
+   3] https://data-flair.training/blogs/python-ordereddict/
+   4] https://www.w3schools.com/python/default.asp
+   5] https://docs.djangoproject.com/en/3.2/topics/db/models/ 
+   1] Lorem Ipsum 
+          
+
+
+```python
+
+
+from django.contrib.auth.models import User
+from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
+import re
+
+class UserSerializer(serializers.ModelSerializer):
+    '''
+     - user = User.objects.create(**validated_data) = not hash password
+     - user = User.objects.create_user(**validated_data) = hash password
+     - save function execute [update or create]
+    '''
+    # To Make Email required  
+    def email_required(value):
+        if value is None:
+            raise serializers.ValidationError('This field may not be blank.')
+    
+    # password strong
+    def password_validator(value):
+        if re.findall(r"^.*(?=.{16,})(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$", value) :
+            pass
+        else : raise serializers.ValidationError('password should contain captal letters ,small letters ,symbol from [@#$%^&+=] , digits at least 16 field')
+    
+    email = serializers.EmailField(
+        validators =
+          [ email_required ,
+           UniqueValidator(queryset= User.objects.all() ,
+           message="An email with that email already exists.") ]
+       )
+    
+    password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={'input_type': 'password', 'placeholder': 'Password'},
+        validators=[password_validator]
+    )
+    
+    # To create new user (correct method)
+    
+    def create(self, validated_data):
+        user = User.objects.create_user( is_active =False,**validated_data)
+        return user
+    
+    # def create(self, validated_data):
+    #     user = User(
+    #         **validated_data
+    #     )
+    #     user.set_password(validated_data['password'])
+    #     user.save()
+    #     return user
+    
+    
+    # def create(self, validated_data):
+    #     user = super().create(validated_data)
+    #     user.set_password(validated_data['password'])
+    #     user.save()
+    #     return user
+
+    # def create(self , validated_data) :
+    #     user = User.objects.create(
+    #         username =validated_data['username'],
+    #         email = validated_data['email']
+    #     )
+    #     user.set_password(validated_data['password'])
+    #     user.save()
+    #     return user  
+    
+    # def save(self, **kwargs):
+    #     '''
+    #      - we can use save with out create or update
+    #     '''
+    #     user = super().save(**kwargs)
+    #     user.set_password(self.validated_data['password'])
+    #     user.save()
+    #     return user 
+    
+    class Meta:
+        # model which we take fields from .
+        model = User
+        # determined fields to manipulate
+        fields = ('first_name' ,'username' ,'email' ,'password' ,'is_active') 
+        read_only_fields = ['is_active']
+        # extra_kwargs = {'password': {'write_only': True}  } 
+       
+
+
+
+'''
+- required fields : 
+   - password
+   - username
+{
+        "password": "mahneyelbana",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "mahneyelbana",
+        "first_name": "",
+        "last_name": "",
+        "email": "",
+        "is_staff": false,
+        "is_active": false,
+        "date_joined": "2022-10-23T03:24:02.298926Z",
+        "groups": [],
+        "user_permissions": []
+}
+'''    
+
+
+class SendEmailVerficationSerializer(serializers.ModelSerializer):
+
+    class Meta :
+        model = User
+        fields = ("email",)
+        
+    def validate(self, data):
+        """
+        Check that User is Exist.
+        """
+        user = User.objects.filter(email = data['email'] ).first()
+        if user is None : 
+            raise serializers.ValidationError("User is Not Exist")
+         
+        return {'email':user.email ,'username':user.username}     
+
+class VerifyEmailOrEmailActivationAPIView():
+    pass
+
+
+class LogInSerializer(serializers.ModelSerializer):
+    
+    username = serializers.CharField(allow_blank=True, allow_null=True)
+   
+    password = serializers.CharField(
+        required=True,
+        style={'input_type': 'password', 'placeholder': 'Password'},
+    ) 
+   
+    class Meta :
+        model = User
+        fields = ["email" ,"username" ,"password"]
+        
+    def validate(self, data):
+          
+        '''
+        INFO :
+         - print(data)
+         - OrderedDict([('email', 'yor email'), ('username', 'your username'), ('password', 'your password')])
+        '''  
+        username = data.get('username').strip()
+        email = data.get('email').strip()
+        
+        if username == "" and  email == "" : 
+            raise serializers.ValidationError("At least enter one field from username and email.")  
+          
+        return data    
+```
+
+
+```python 
+#from django.shortcuts import render
+
+
+
+
+from .serializers import ( 
+    UserSerializer ,
+    SendEmailVerficationSerializer , LogInSerializer)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAdminUser  , IsAuthenticated
+from django.contrib.auth.models import User 
+from rest_framework.authtoken.models import Token
+from rest_framework import permissions
+from .email import  send_otp_via_email
+
+
+class IsAPIKey(permissions.BasePermission):
+    message = 'IS Not API-kEY !'
+
+    def has_permission(self, request, view):
+        if str(request.user) == 'apikey':
+            return True
+        return False    
+
+class UserRecordView(APIView):
+    """
+    API View to create or get a list of all the registered
+    users. GET request returns the registered users whereas
+    a POST request allows to create a new user.
+    """
+    permission_classes = [IsAPIKey,IsAuthenticated]
+
+    def get(self,request, format=None):
+
+        try:
+           users = User.objects.all()
+           serializer = UserSerializer(users, many=True)
+           return Response(serializer.data)
+        except:
+             return Response('error')
+    #apiKeyUser123456
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=ValueError):
+            serializer.create(validated_data=request.data)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            {
+                "error": True,
+                "error_msg": serializer.error_messages,
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+def authorization_using_token(request):
+           authorization_token = request.headers['Authorization']
+           token = authorization_token[6:]
+           userTokenObject = Token.objects.get(key= token)
+           users = User.objects.filter(username= userTokenObject.user)
+           return users 
+
+class userItem(APIView):
+    
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request , format=None):
+             
+
+        try:
+           print(request.group)
+           # request.user in token and basic auth
+           users =  users = User.objects.filter(username = request.user) 
+
+           serializer = UserSerializer(users, many=True)
+           return Response(serializer.data)
+        except:
+             return Response('error')   
+
+
+# [1] Create New an account (SignUp)
+class RegisterAPIView(APIView):
+    '''
+    URL : http://127.0.0.1:8001/auth_user_app/register/
+    Method : POST
+    Required body data (json) : 
+      {
+       "username":"your user name" ,
+      "email":"your email"
+      'first_name':"your frist name" ,
+      'password':"password"
+      }
+    '''
+    serializer_class = UserSerializer
+
+    def post(self, request ):
+        
+        serializer = self.serializer_class(data=request.data)
+        
+        if serializer.is_valid():
+            user = serializer.save()
+            # user = serializer.create(validated_data=request.data)
+
+            send_otp_via_email(email= user.email ,username= user.username)
+            
+            response_data =  {
+                'user': serializer.data,
+                'msge':'check your email verfication code'
+            }
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# [2] Send  otp code to gmail  (code to active email)
+class SendEmailVerficationAPIView(APIView):
+    '''
+      -- send otp code to user email to active your email -- 
+
+    URL : http://127.0.0.1:8001/auth_user_app/SendEmailVerfication/
+    Method : POST
+    Required body data (json) : {"email":"your email"}
+    '''
+    serializer_class = SendEmailVerficationSerializer
+
+    def post(self, request ):
+        
+        serializer = self.serializer_class(data=request.data)
+        
+        if serializer.is_valid():
+            email = serializer.validated_data.get('email')
+            username = serializer.validated_data.get('username')
+
+            try :
+              send_otp_via_email(email= email , username= username)
+              return Response({"msg":"check your email verfication code "}, status=status.HTTP_201_CREATED)
+           
+            except :    
+               return Response({"error":"resend code another"}, status=status.HTTP_400_BAD_REQUEST)
+    
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+
+
+# [3] Email verfication ot Email activation 
+class VerifyEmailOrEmailActivationAPIView(APIView):
+    '''
+      -- active email using otp code -- 
+
+    URL : http://127.0.0.1:8001/auth_user_app/SendEmailVerfication/
+    Method : PUT
+    Required body data (json) : {"email":"your email"}
+    '''
+    serializer_class = SendEmailVerficationSerializer 
+
+    def put():
+            pass
+
+
+# [4] 
+class LogInAPIView(APIView):
+    '''
+    log in using ( email or username ) and password
+    '''
+    serializer_class = LogInSerializer
+
+    def post(self, request ):
+        
+        serializer = self.serializer_class(data=request.data)
+        
+        if serializer.is_valid():
+            print(serializer.data['password'])
+
+            try :
+              
+              return Response(serializer.data, status=status.HTTP_201_CREATED)
+           
+            except :    
+               return Response({"error":"resend code another"}, status=status.HTTP_400_BAD_REQUEST)
+    
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+          
+```
+
+```python
+from django.shortcuts import render, redirect
+from django.views import View
+import json
+from django.http import JsonResponse
+from django.contrib.auth.models import User
+import json
+from django.http import JsonResponse
+from django.contrib.auth.models import User
+from validate_email import validate_email
+from django.contrib import messages
+from django.core.mail import EmailMessage
+from django.contrib.sites.shortcuts import get_current_site
+from django.utils.encoding import force_bytes, force_text, DjangoUnicodeDecodeError
+from django.core.mail import send_mail
+from django.contrib.sites.shortcuts import get_current_site
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.template.loader import render_to_string
+from .utils import account_activation_token
+from django.urls import reverse
+from django.contrib import auth
+
+# Create your views here.
+
+
+class EmailValidationView(View):
+    def post(self, request):
+        data = json.loads(request.body)
+        email = data['email']
+        if not validate_email(email):
+            return JsonResponse({'email_error': 'Email is invalid'}, status=400)
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({'email_error': 'sorry email in use,choose another one '}, status=409)
+        return JsonResponse({'email_valid': True})
+
+
+class UsernameValidationView(View):
+    def post(self, request):
+        data = json.loads(request.body)
+        username = data['username']
+        if not str(username).isalnum():
+            return JsonResponse({'username_error': 'username should only contain alphanumeric characters'}, status=400)
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'username_error': 'sorry username in use,choose another one '}, status=409)
+        return JsonResponse({'username_valid': True})
+
+
+class RegistrationView(View):
+    def get(self, request):
+        return render(request, 'authentication/register.html')
+
+    def post(self, request):
+        # GET USER DATA
+        # VALIDATE
+        # create a user account
+
+        username = request.POST['username']
+        email = request.POST['email']
+        password = request.POST['password']
+
+        context = {
+            'fieldValues': request.POST
+        }
+
+        if not User.objects.filter(username=username).exists():
+            if not User.objects.filter(email=email).exists():
+                if len(password) < 6:
+                    messages.error(request, 'Password too short')
+                    return render(request, 'authentication/register.html', context)
+
+                user = User.objects.create_user(username=username, email=email)
+                user.set_password(password)
+                user.is_active = False
+                user.save()
+                current_site = get_current_site(request)
+                email_body = {
+                    'user': user,
+                    'domain': current_site.domain,
+                    'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                    'token': account_activation_token.make_token(user),
+                }
+
+                link = reverse('activate', kwargs={
+                               'uidb64': email_body['uid'], 'token': email_body['token']})
+
+                email_subject = 'Activate your account'
+
+                activate_url = 'http://'+current_site.domain+link
+
+                email = EmailMessage(
+                    email_subject,
+                    'Hi '+user.username + ', Please the link below to activate your account \n'+activate_url,
+                    'noreply@semycolon.com',
+                    [email],
+                )
+                email.send(fail_silently=False)
+                messages.success(request, 'Account successfully created')
+                return render(request, 'authentication/register.html')
+
+        return render(request, 'authentication/register.html')
+
+
+class VerificationView(View):
+    def get(self, request, uidb64, token):
+        try:
+            id = force_text(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=id)
+
+            if not account_activation_token.check_token(user, token):
+                return redirect('login'+'?message='+'User already activated')
+
+            if user.is_active:
+                return redirect('login')
+            user.is_active = True
+            user.save()
+
+            messages.success(request, 'Account activated successfully')
+            return redirect('login')
+
+        except Exception as ex:
+            pass
+
+        return redirect('login')
+
+
+class LoginView(View):
+    def get(self, request):
+        return render(request, 'authentication/login.html')
+
+    def post(self, request):
+        username = request.POST['username']
+        password = request.POST['password']
+
+        if username and password:
+            user = auth.authenticate(username=username, password=password)
+
+            if user:
+                if user.is_active:
+                    auth.login(request, user)
+                    messages.success(request, 'Welcome, ' +
+                                     user.username+' you are now logged in')
+                    return redirect('expenses')
+                messages.error(
+                    request, 'Account is not active,please check your email')
+                return render(request, 'authentication/login.html')
+            messages.error(
+                request, 'Invalid credentials,try again')
+            return render(request, 'authentication/login.html')
+
+        messages.error(
+            request, 'Please fill all fields')
+        return render(request, 'authentication/login.html')
+
+
+class LogoutView(View):
+    def post(self, request):
+        auth.logout(request)
+        messages.success(request, 'You have been logged out')
+        return redirect('login')
+
+############################
+
+
+
+from .views import RegistrationView, UsernameValidationView, EmailValidationView, LogoutView, VerificationView, LoginView
+from django.urls import path
+from django.views.decorators.csrf import csrf_exempt
+
+
+urlpatterns = [
+    path('register', RegistrationView.as_view(), name="register"),
+    path('login', LoginView.as_view(), name="login"),
+    path('logout', LogoutView.as_view(), name="logout"),
+    path('validate-username', csrf_exempt(UsernameValidationView.as_view()),
+         name="validate-username"),
+    path('validate-email', csrf_exempt(EmailValidationView.as_view()),
+         name='validate_email'),
+    path('activate/<uidb64>/<token>',
+         VerificationView.as_view(), name='activate'),
+]
+
+```
+
+
+```python
+from django.shortcuts import render
+from rest_framework import generics, status, views, permissions
+from .serializers import RegisterSerializer, SetNewPasswordSerializer, ResetPasswordEmailRequestSerializer, EmailVerificationSerializer, LoginSerializer, LogoutSerializer
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import User
+from .utils import Util
+from django.contrib.sites.shortcuts import get_current_site
+from django.urls import reverse
+import jwt
+from django.conf import settings
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from .renderers import UserRenderer
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.encoding import smart_str, force_str, smart_bytes, DjangoUnicodeDecodeError
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.contrib.sites.shortcuts import get_current_site
+from django.urls import reverse
+from .utils import Util
+from django.shortcuts import redirect
+from django.http import HttpResponsePermanentRedirect
+import os
+
+
+class CustomRedirect(HttpResponsePermanentRedirect):
+
+    allowed_schemes = [os.environ.get('APP_SCHEME'), 'http', 'https']
+
+
+class RegisterView(generics.GenericAPIView):
+
+    serializer_class = RegisterSerializer
+    renderer_classes = (UserRenderer,)
+
+    def post(self, request):
+        user = request.data
+        serializer = self.serializer_class(data=user)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        user_data = serializer.data
+        user = User.objects.get(email=user_data['email'])
+        token = RefreshToken.for_user(user).access_token
+        current_site = get_current_site(request).domain
+        relativeLink = reverse('email-verify')
+        absurl = 'http://'+current_site+relativeLink+"?token="+str(token)
+        email_body = 'Hi '+user.username + \
+            ' Use the link below to verify your email \n' + absurl
+        data = {'email_body': email_body, 'to_email': user.email,
+                'email_subject': 'Verify your email'}
+
+        Util.send_email(data)
+        return Response(user_data, status=status.HTTP_201_CREATED)
+
+
+class VerifyEmail(views.APIView):
+    serializer_class = EmailVerificationSerializer
+
+    token_param_config = openapi.Parameter(
+        'token', in_=openapi.IN_QUERY, description='Description', type=openapi.TYPE_STRING)
+
+    @swagger_auto_schema(manual_parameters=[token_param_config])
+    def get(self, request):
+        token = request.GET.get('token')
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY)
+            user = User.objects.get(id=payload['user_id'])
+            if not user.is_verified:
+                user.is_verified = True
+                user.save()
+            return Response({'email': 'Successfully activated'}, status=status.HTTP_200_OK)
+        except jwt.ExpiredSignatureError as identifier:
+            return Response({'error': 'Activation Expired'}, status=status.HTTP_400_BAD_REQUEST)
+        except jwt.exceptions.DecodeError as identifier:
+            return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LoginAPIView(generics.GenericAPIView):
+    serializer_class = LoginSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class RequestPasswordResetEmail(generics.GenericAPIView):
+    serializer_class = ResetPasswordEmailRequestSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+
+        email = request.data.get('email', '')
+
+        if User.objects.filter(email=email).exists():
+            user = User.objects.get(email=email)
+            uidb64 = urlsafe_base64_encode(smart_bytes(user.id))
+            token = PasswordResetTokenGenerator().make_token(user)
+            current_site = get_current_site(
+                request=request).domain
+            relativeLink = reverse(
+                'password-reset-confirm', kwargs={'uidb64': uidb64, 'token': token})
+
+            redirect_url = request.data.get('redirect_url', '')
+            absurl = 'http://'+current_site + relativeLink
+            email_body = 'Hello, \n Use link below to reset your password  \n' + \
+                absurl+"?redirect_url="+redirect_url
+            data = {'email_body': email_body, 'to_email': user.email,
+                    'email_subject': 'Reset your passsword'}
+            Util.send_email(data)
+        return Response({'success': 'We have sent you a link to reset your password'}, status=status.HTTP_200_OK)
+
+
+class PasswordTokenCheckAPI(generics.GenericAPIView):
+    serializer_class = SetNewPasswordSerializer
+
+    def get(self, request, uidb64, token):
+
+        redirect_url = request.GET.get('redirect_url')
+
+        try:
+            id = smart_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(id=id)
+
+            if not PasswordResetTokenGenerator().check_token(user, token):
+                if len(redirect_url) > 3:
+                    return CustomRedirect(redirect_url+'?token_valid=False')
+                else:
+                    return CustomRedirect(os.environ.get('FRONTEND_URL', '')+'?token_valid=False')
+
+            if redirect_url and len(redirect_url) > 3:
+                return CustomRedirect(redirect_url+'?token_valid=True&message=Credentials Valid&uidb64='+uidb64+'&token='+token)
+            else:
+                return CustomRedirect(os.environ.get('FRONTEND_URL', '')+'?token_valid=False')
+
+        except DjangoUnicodeDecodeError as identifier:
+            try:
+                if not PasswordResetTokenGenerator().check_token(user):
+                    return CustomRedirect(redirect_url+'?token_valid=False')
+                    
+            except UnboundLocalError as e:
+                return Response({'error': 'Token is not valid, please request a new one'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class SetNewPasswordAPIView(generics.GenericAPIView):
+    serializer_class = SetNewPasswordSerializer
+
+    def patch(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({'success': True, 'message': 'Password reset success'}, status=status.HTTP_200_OK)
+
+
+class LogoutAPIView(generics.GenericAPIView):
+    serializer_class = LogoutSerializer
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+        
+        
+        ############################################################
+from rest_framework import serializers
+from .models import User
+from django.contrib import auth
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.encoding import smart_str, force_str, smart_bytes, DjangoUnicodeDecodeError
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        max_length=68, min_length=6, write_only=True)
+
+    default_error_messages = {
+        'username': 'The username should only contain alphanumeric characters'}
+
+    class Meta:
+        model = User
+        fields = ['email', 'username', 'password']
+
+    def validate(self, attrs):
+        email = attrs.get('email', '')
+        username = attrs.get('username', '')
+
+        if not username.isalnum():
+            raise serializers.ValidationError(
+                self.default_error_messages)
+        return attrs
+
+    def create(self, validated_data):
+        return User.objects.create_user(**validated_data)
+
+
+class EmailVerificationSerializer(serializers.ModelSerializer):
+    token = serializers.CharField(max_length=555)
+
+    class Meta:
+        model = User
+        fields = ['token']
+
+
+class LoginSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(max_length=255, min_length=3)
+    password = serializers.CharField(
+        max_length=68, min_length=6, write_only=True)
+    username = serializers.CharField(
+        max_length=255, min_length=3, read_only=True)
+
+    tokens = serializers.SerializerMethodField()
+
+    def get_tokens(self, obj):
+        user = User.objects.get(email=obj['email'])
+
+        return {
+            'refresh': user.tokens()['refresh'],
+            'access': user.tokens()['access']
+        }
+
+    class Meta:
+        model = User
+        fields = ['email', 'password', 'username', 'tokens']
+
+    def validate(self, attrs):
+        email = attrs.get('email', '')
+        password = attrs.get('password', '')
+        filtered_user_by_email = User.objects.filter(email=email)
+        user = auth.authenticate(email=email, password=password)
+
+        if filtered_user_by_email.exists() and filtered_user_by_email[0].auth_provider != 'email':
+            raise AuthenticationFailed(
+                detail='Please continue your login using ' + filtered_user_by_email[0].auth_provider)
+
+        if not user:
+            raise AuthenticationFailed('Invalid credentials, try again')
+        if not user.is_active:
+            raise AuthenticationFailed('Account disabled, contact admin')
+        if not user.is_verified:
+            raise AuthenticationFailed('Email is not verified')
+
+        return {
+            'email': user.email,
+            'username': user.username,
+            'tokens': user.tokens
+        }
+
+        return super().validate(attrs)
+
+
+class ResetPasswordEmailRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(min_length=2)
+
+    redirect_url = serializers.CharField(max_length=500, required=False)
+
+    class Meta:
+        fields = ['email']
+
+
+class SetNewPasswordSerializer(serializers.Serializer):
+    password = serializers.CharField(
+        min_length=6, max_length=68, write_only=True)
+    token = serializers.CharField(
+        min_length=1, write_only=True)
+    uidb64 = serializers.CharField(
+        min_length=1, write_only=True)
+
+    class Meta:
+        fields = ['password', 'token', 'uidb64']
+
+    def validate(self, attrs):
+        try:
+            password = attrs.get('password')
+            token = attrs.get('token')
+            uidb64 = attrs.get('uidb64')
+
+            id = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(id=id)
+            if not PasswordResetTokenGenerator().check_token(user, token):
+                raise AuthenticationFailed('The reset link is invalid', 401)
+
+            user.set_password(password)
+            user.save()
+
+            return (user)
+        except Exception as e:
+            raise AuthenticationFailed('The reset link is invalid', 401)
+        return super().validate(attrs)
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+    default_error_message = {
+        'bad_token': ('Token is expired or invalid')
+    }
+
+    def validate(self, attrs):
+        self.token = attrs['refresh']
+        return attrs
+
+    def save(self, **kwargs):
+
+        try:
+            RefreshToken(self.token).blacklist()
+
+        except TokenError:
+            self.fail('bad_token')
+
+#####################################################
+
+
+from django.db import models
+
+# Create your models here.
+from django.contrib.auth.models import (
+    AbstractBaseUser, BaseUserManager, PermissionsMixin)
+
+from django.db import models
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
+class UserManager(BaseUserManager):
+
+    def create_user(self, username, email, password=None):
+        if username is None:
+            raise TypeError('Users should have a username')
+        if email is None:
+            raise TypeError('Users should have a Email')
+
+        user = self.model(username=username, email=self.normalize_email(email))
+        user.set_password(password)
+        user.save()
+        return user
+
+    def create_superuser(self, username, email, password=None):
+        if password is None:
+            raise TypeError('Password should not be none')
+
+        user = self.create_user(username, email, password)
+        user.is_superuser = True
+        user.is_staff = True
+        user.save()
+        return user
+
+
+AUTH_PROVIDERS = {'facebook': 'facebook', 'google': 'google',
+                  'twitter': 'twitter', 'email': 'email'}
+
+
+class User(AbstractBaseUser, PermissionsMixin):
+    username = models.CharField(max_length=255, unique=True, db_index=True)
+    email = models.EmailField(max_length=255, unique=True, db_index=True)
+    is_verified = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    auth_provider = models.CharField(
+        max_length=255, blank=False,
+        null=False, default=AUTH_PROVIDERS.get('email'))
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
+
+    objects = UserManager()
+
+    def __str__(self):
+        return self.email
+
+    def tokens(self):
+        refresh = RefreshToken.for_user(self)
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token)
+        }
+ ################################
+ from django.core.mail import EmailMessage
+
+
+import threading
+
+
+class EmailThread(threading.Thread):
+
+    def __init__(self, email):
+        self.email = email
+        threading.Thread.__init__(self)
+
+    def run(self):
+        self.email.send()
+
+
+class Util:
+    @staticmethod
+    def send_email(data):
+        email = EmailMessage(
+            subject=data['email_subject'], body=data['email_body'], to=[data['to_email']])
+        EmailThread(email).start()       
+
+        ##############################################
+
+from django.urls import path
+from .views import RegisterView, LogoutAPIView, SetNewPasswordAPIView, VerifyEmail, LoginAPIView, PasswordTokenCheckAPI, RequestPasswordResetEmail
+from rest_framework_simplejwt.views import (
+    TokenRefreshView,
+)
+
+
+urlpatterns = [
+    path('register/', RegisterView.as_view(), name="register"),
+    path('login/', LoginAPIView.as_view(), name="login"),
+    path('logout/', LogoutAPIView.as_view(), name="logout"),
+    path('email-verify/', VerifyEmail.as_view(), name="email-verify"),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('request-reset-email/', RequestPasswordResetEmail.as_view(),
+         name="request-reset-email"),
+    path('password-reset/<uidb64>/<token>/',
+         PasswordTokenCheckAPI.as_view(), name='password-reset-confirm'),
+    path('password-reset-complete', SetNewPasswordAPIView.as_view(),
+         name='password-reset-complete')
+]
+```
+
+```python
+from django.shortcuts import render
+from rest_framework.generics import GenericAPIView
+from .serializers import UserSerializer, LoginSerializer
+from rest_framework.response import Response
+from rest_framework import status
+from django.conf import settings
+from django.contrib import auth
+import jwt
+# Create your views here.
+
+
+class RegisterView(GenericAPIView):
+    serializer_class = UserSerializer
+
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LoginView(GenericAPIView):
+    serializer_class = LoginSerializer
+
+    def post(self, request):
+        data = request.data
+        username = data.get('username', '')
+        password = data.get('password', '')
+        user = auth.authenticate(username=username, password=password)
+
+        if user:
+            auth_token = jwt.encode(
+                {'username': user.username}, settings.JWT_SECRET_KEY, algorithm="HS256")
+
+            serializer = UserSerializer(user)
+
+            data = {'user': serializer.data, 'token': auth_token}
+
+            return Response(data, status=status.HTTP_200_OK)
+
+            # SEND RES
+        return Response({'detail': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+#################################################
+from rest_framework import serializers
+from django.contrib.auth.models import User
+
+
+class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        max_length=65, min_length=8, write_only=True)
+    email = serializers.EmailField(max_length=255, min_length=4),
+    first_name = serializers.CharField(max_length=255, min_length=2)
+    last_name = serializers.CharField(max_length=255, min_length=2)
+
+    class Meta:
+        model = User
+        fields = ['username', 'first_name', 'last_name', 'email', 'password'
+                  ]
+
+    def validate(self, attrs):
+        email = attrs.get('email', '')
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError(
+                {'email': ('Email is already in use')})
+        return super().validate(attrs)
+
+    def create(self, validated_data):
+        return User.objects.create_user(**validated_data)
+
+
+class LoginSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        max_length=65, min_length=8, write_only=True)
+    username = serializers.CharField(max_length=255, min_length=2)
+
+    class Meta:
+        model = User
+        fields = ['username', 'password']
+        ################################################
+        
+import jwt
+from rest_framework import authentication, exceptions
+from django.conf import settings
+from django.contrib.auth.models import User
+
+
+class JWTAuthentication(authentication.BaseAuthentication):
+
+    def authenticate(self, request):
+        auth_data = authentication.get_authorization_header(request)
+
+        if not auth_data:
+            return None
+
+        prefix, token = auth_data.decode('utf-8').split(' ')
+
+        try:
+            payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms="HS256")
+
+            user = User.objects.get(username=payload['username'])
+            return (user, token)
+
+        except jwt.DecodeError as identifier:
+            raise exceptions.AuthenticationFailed(
+                'Your token is invalid,login')
+        except jwt.ExpiredSignatureError as identifier:
+            raise exceptions.AuthenticationFailed(
+                'Your token is expired,login')
+
+        return super().authenticate(request)
+```
+
+
+```
+#apiKeyUser123456
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=ValueError):
+            serializer.create(validated_data=request.data)
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(
+            {
+                "error": True,
+                "error_msg": serializer.error_messages,
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+```
+
+```
+class IsAPIKey(permissions.BasePermission):
+    message = 'IS Not API-kEY !'
+
+    def has_permission(self, request, view):
+        if str(request.user) == 'apikey':
+            return True
+        return False    
+
+```
+```
+def authorization_using_token(request):
+    authorization_token = request.headers['Authorization']
+    token = authorization_token[6:]
+    userTokenObject = Token.objects.get(key=token)
+    users = User.objects.filter(username=userTokenObject.user)
+    return users
+
+
+class userItem(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+
+        try:
+            print(request.group)
+            # request.user in token and basic auth
+            users = users = User.objects.filter(username=request.user)
+
+            serializer = UserSerializer(users, many=True)
+            return Response(serializer.data)
+        except:
+            return Response('error')
+```
+
+```
+'''
+        try :
+           print(request.headers['Authorization'][7:])
+        except :
+            raise exceptions.AuthenticationFailed(
+                 'Your token is invalid,login')
+
+        print(auth_data)
+        print("------------")
+        #     def authenticate(self, request):
+#         auth_data = authentication.get_authorization_header(request)
+
+#         if not auth_data:
+#             return None
+
+#         prefix, token = auth_data.decode('utf-8').split(' ')
+
+#         try:
+#             payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms="HS256")
+
+#             user = User.objects.get(username=payload['username'])
+#             return (user, token)
+
+#         except jwt.DecodeError as identifier:
+#             raise exceptions.AuthenticationFailed(
+#                 'Your token is invalid,login')
+#         except jwt.ExpiredSignatureError as identifier:
+#             raise exceptions.AuthenticationFailed(
+#                 'Your token is expired,login')
+
+#         return super().authenticate(request)
+'''
+```
+
+```
+class jwtIsAuthenticated(permissions.BasePermission):
+    
+    """
+    Object-level permission to only allow owners of an object to edit it.
+    Assumes the model instance has an `owner` attribute.
+    """
+    
+    def has_permission(self, request, view):
+        
+        try :
+           access_Token = request.headers['Authorization'][6:]
+           #print(access_Token)
+           #payload = decode_data(access_Token)
+           #user = User.objects.filter(username = payload['username'] ).filter()
+           return True
+           #if user is None :
+           #   return False
+           #else :
+           #  return True 
+  
+        except jwt.exceptions.ExpiredSignatureError as expired_error:
+              self.message = str(expired_error)
+              return False
+        except jwt.exceptions.InvalidSignatureError as Invalid_signature_error:
+              self.message = str(Invalid_signature_error)   
+              return False  
+        except  :
+            self.message ="Allows access only to authenticated users"
+            return False    
+
+
+```
+```python
+#instance_token = Token.objects.get(user=user)
+#instance_token.delete() 
+```       

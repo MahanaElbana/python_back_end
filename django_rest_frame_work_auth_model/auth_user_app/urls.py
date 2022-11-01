@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ( GenerateAccessTokenAPIView, LogInUserNameAPIView, 
+from .views import ( ChangingPasswordAPIView, GenerateAccessTokenAPIView, LogInUserNameAPIView, 
         UserDetails ,
         RegisterAPIView ,
         SendEmailVerficationAPIView , VerifyEmailOrEmailActivationAPIView,LogoutView
@@ -29,7 +29,9 @@ urlpatterns = [
     # to verify your email and match the OTP code.
     path('EmailOTPpVerfication/' ,VerifyEmailOrEmailActivationAPIView.as_view()) ,
 
-    path('logout/' ,LogoutView.as_view()) 
+    path('logout/' ,LogoutView.as_view()) ,
+
+    path('change_password/', ChangingPasswordAPIView.as_view())
 
     
 ]

@@ -1,9 +1,11 @@
 
 
-from .serializers import (GenerateAccessTokenSerializer, 
+from auth_user_app.serializers import (GenerateAccessTokenSerializer, 
                           UserSerializer,
                           SendEmailVerficationSerializer,
-                          LogInUserNameSerializer ,VerifyEmailOrEmailActivationSerializer)
+                          LogInUserNameSerializer ,
+                          VerifyEmailOrEmailActivationSerializer ,
+                          ChangingPasswordSerializer,)
 
 from auth_user_app.jwt_tokens import (create_access_token,
                                       create_access_refresh_token)
@@ -324,24 +326,51 @@ class GenerateAccessTokenAPIView(APIView):
 # [7] logout API VIEW
 class LogoutView(APIView):
     
-    serializer_class = GenerateAccessTokenSerializer
-    
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTRefreshAuthentication] 
-    ## ---------------- swagger ------------------------##
-    def get_serializer_context(self):
-        return {
-            'request': self.request,
-            'format': self.format_kwarg,
-            'view': self
-        }
 
-    def get_serializer(self, *args, **kwargs):
-        kwargs['context'] = self.get_serializer_context()
-        return self.serializer_class(*args, **kwargs)
-    ## --------------------------------------------------##
     def delete(self, request):
         user = request.user
-        token = Token.objects.filter(user = user).first()
-        token.delete()
-        return Response({'error': 'user is not exist' } , status= status.HTTP_400_BAD_REQUEST)
+        try  :
+          token  = Token.objects.filter(user = user).first()
+          token.delete()
+          return Response({'msg': 'logout successfully !' } , status= status.HTTP_400_BAD_REQUEST)
+        except :  
+          return Response({'error': 'user is not exist' } , status= status.HTTP_400_BAD_REQUEST)
+
+
+# change password :
+class ChangingPasswordAPIView(APIView):
+    
+    serializer_class = ChangingPasswordSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    #authentication_classes = [JWTRefreshAuthentication]
+    def post(self, request  ):
+
+        serializer = self.serializer_class(data=request.data)
+        user = request.user    
+        print(user.username)
+        if serializer.is_valid():
+            
+            try:
+                old_password = serializer.validated_data.get("old_password")
+                print(old_password)
+                new_password = serializer.validated_data.get("new_password")
+                
+
+                user_check = authenticate(request, username = user.username, password = old_password)
+                
+                # check old password
+                if user_check is None:
+                    return Response({"error": "old password is not correct !"}, status=status.HTTP_400_BAD_REQUEST)
+                
+                user_check.set_password(new_password)
+                user_check.save()
+                return Response({'username':user.username , "msge":"successfully changed password"})
+            
+            except :     
+               return Response({"error": " dont save !"}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+          

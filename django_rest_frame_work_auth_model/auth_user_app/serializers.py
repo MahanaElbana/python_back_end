@@ -1,5 +1,6 @@
 
 
+from dataclasses import fields
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
@@ -178,3 +179,56 @@ class GenerateAccessTokenSerializer(serializers.ModelSerializer):
     class Meta :
         model = Token
         fields = '__all__'
+
+
+# change password 
+
+class ChangingPasswordSerializer(serializers.ModelSerializer):
+    
+    # password strong
+    def password_validator(value):
+        if re.findall(r"^.*(?=.{16,})(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=]).*$", value) :
+            pass
+        else : 
+            raise serializers.ValidationError('password should contain captal letters ,small letters ,symbol from [@#$%^&+=] , digits at least 16 field')
+    
+    # fields
+    old_password = serializers.CharField(
+        required=True,
+        write_only =True ,
+        style={'input_type': 'password', 'placeholder': 'Password'},
+    ) 
+    new_password = serializers.CharField(
+        required=True,
+        write_only =True ,
+        style={'input_type': 'password', 'placeholder': 'Password'},
+        #validators=[password_validator] ,
+    ) 
+    confirm_password = serializers.CharField(
+        required=True,
+        write_only =True ,
+        style={'input_type': 'password', 'placeholder': 'Password'},
+        #validators=[password_validator] ,
+    ) 
+    
+    # validators on class
+    def validate(self, data):
+  
+       new_password = data.get('new_password')
+       confirm_password = data.get('confirm_password')
+       
+       if new_password  != confirm_password: 
+           raise serializers.ValidationError("The new password must be the same as the confirmed password !")  
+         
+       return data
+    
+    # update user 
+    # def update(self, instance, validated_data):
+    #     print(validated_data)
+    #     user = User.objects.update( password = validated_data.get("new_password"))
+    #     return user
+    
+    class Meta :
+        model = User 
+        fields = ('old_password' , 'new_password' , 'confirm_password',)
+    
